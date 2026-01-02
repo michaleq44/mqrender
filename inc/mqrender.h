@@ -1,5 +1,3 @@
-#pragma once
-
-#include "types.h"
-#include "buffer.h"
-#include "draw.h"
+#include <mqrender/types.h>
+#include <mqrender/buffer.h>
+#include <mqrender/draw.h>

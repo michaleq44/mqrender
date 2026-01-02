@@ -3,13 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 
-#include "types.h"
+#include <mqrender/types.h>
+
+MQbuffer *MQCreateBuffer();
 
 bool MQInitBuffer(MQbuffer *_buffer,
-		const MQvec2 size);
+		const MQvec2 _size);
 
 bool MQResizeBuffer(MQbuffer *_buffer,
-		const MQvec2 size);
+		const MQvec2 _size);
 
 void MQFreeBuffer(MQbuffer *_buffer);

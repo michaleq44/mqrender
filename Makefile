@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = --std=c2x -Iinc -Wall -Wextra -c
+CFLAGS = --std=c2x -Iinc -Iinc/mqrender -Wall -Wextra -c
 ifdef release
 	CFLAGS += -O3
 else
@@ -24,6 +24,9 @@ BINARY = libmqrender.so
 
 all: $(BIN_DIR)/$(BINARY)
 
+test:
+	gcc test.c -g -lmqrender -o test
+
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
@@ -36,14 +39,20 @@ $(BIN_DIR)/$(BINARY): $(OBJ_FILES) $(BIN_DIR)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) $< -o $@
 
-test: all
-	gcc test.c --std=c2x -Lbin -I. -lmqrender -o test 
-
 install: all
-	install "$(BIN_DIR)/$(BINARY)" "$(DESTDIR)/lib"
+	mkdir -p "$(DESTDIR)/lib"
+	mkdir -p "$(DESTDIR)/include/mqrender"
+	install -Dm 755 "$(BIN_DIR)/$(BINARY)" "$(DESTDIR)/lib"
+	install -Dm 644 inc/mqrender.h "$(DESTDIR)/include/"
+	install -Dm 644 inc/mqrender/* "$(DESTDIR)/include/mqrender/"
+
+uninstall:
+	rm -f "$(DESTDIR)/lib/$(BINARY)"
+	rm -f "$(DESTDIR)/include/mqrender.h"
+	rm -rf "$(DESTDIR)/include/mqrender"
 
 clean:
 	rm -f $(OBJ_FILES) "$(BIN_DIR)/$(BINARY)"
 	rm -f test
 
-.PHONY: all clean
+.PHONY: all clean test install uninstall
