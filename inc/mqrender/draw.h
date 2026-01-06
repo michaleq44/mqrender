@@ -43,6 +43,16 @@ MQdraw_return_value MQDrawTriangle(const MQbuffer *_buffer,
 		const MQvec2 _v1, const MQvec2 _v2, const MQvec2 _v3,
 		const bool _blend, const bool _fill, const MQcolor_t _color);
 
-MQdraw_return_value MQDrawPolygon(const MQbuffer *_buffer,
+MQdraw_return_value MQDrawPolygonSimpleFromArray(const MQbuffer *_buffer,
 		const MQvec2 *_vertices, const size_t _n_vertices,
 		const bool _blend, const bool _fill, const MQcolor_t _color);
+
+
+MQdraw_return_value MQDrawPolygonSimple(const MQbuffer *_buffer,
+		const bool _blend, const bool _fill, const MQcolor_t _color,
+		const size_t _n_vertices,
+		...);
+
+MQdraw_return_value MQDrawCircle(const MQbuffer *_buffer,
+		MQvec2 _center, size_t _radius,
+		bool _blend, bool _fill, MQcolor_t _color);

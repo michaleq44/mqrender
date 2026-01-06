@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = --std=c2x -Iinc -Iinc/mqrender -Wall -Wextra -c
+CFLAGS = --std=c2x -Iinc -Iinc/mqrender -Wall -Wextra -pedantic -c
 ifdef release
 	CFLAGS += -O3
 else
@@ -25,7 +25,7 @@ BINARY = libmqrender.so
 all: $(BIN_DIR)/$(BINARY)
 
 test:
-	gcc test.c -g -lmqrender -o test
+	gcc test.c -g -lmqrender -lSDL2 -D_GNU_SOURCE=1 -D_REENTRANT -o test
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)

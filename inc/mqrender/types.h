@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
+#include <stdarg.h>
 
 #ifndef min
 #define min(x, y) (((x) < (y)) ? (x) : (y))
@@ -28,6 +28,10 @@ typedef uint32_t MQcolor_t;
 typedef uint32_t MQcolor_blend_t;
 typedef uint8_t MQcolor_channel_t;
 
+constexpr MQcolor_t MQCOLOR_MAX = ~(MQcolor_t)0;
+constexpr MQcolor_channel_t MQCOLOR_CHANNEL_MAX = 0xFF;
+constexpr MQcolor_blend_t MQCOLOR_BLEND_MAX = ~(MQcolor_blend_t)0;
+
 typedef enum MQdraw_return_value {
 	MQ_DRAWN_FULL = 0,
 	MQ_OUT_OF_BOUNDS = 1,
@@ -50,8 +54,8 @@ typedef struct MQrgba {
 
 typedef struct MQbuffer {
 	// RGBA8888 format: 0xRRGGBBAA
-	MQcolor_t *data;
 	MQvec2 size;
+	MQcolor_t *data;
 } MQbuffer;
 
 // retvals
@@ -63,7 +67,10 @@ MQvec2 MQVec2(size_t _x, size_t _y);
 MQrgba MQRGBA(MQcolor_channel_t _r, MQcolor_channel_t _g, MQcolor_channel_t _b,
 		MQcolor_channel_t _a);
 MQrgba MQColorToRGBA(MQcolor_t _col);
-MQcolor_t MQRGBAtoColor(MQrgba _rgba);
+MQcolor_t MQRGBAToColor(MQrgba _rgba);
+MQcolor_t MQRGBAElementsToColor(MQcolor_channel_t _r, MQcolor_channel_t _g, MQcolor_channel_t _b,
+		MQcolor_channel_t _a);
+MQcolor_t MQRGBElementsToColor(MQcolor_channel_t _r, MQcolor_channel_t _g, MQcolor_channel_t _b);
 MQcolor_t MQBlendColors(MQcolor_t _color_dest, MQcolor_t _color_src);
 MQretval_color MQGetPoint(const MQbuffer *_buffer, const MQvec2 _coords);
 MQcolor_t MQGetPointUNSAFE(const MQbuffer *_buffer, const MQvec2 _coords);

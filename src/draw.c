@@ -181,6 +181,7 @@ MQdraw_return_value MQDrawRect(const MQbuffer *_buffer,
 			ret |= MQDrawHorizontalLine(_buffer,
 					MQVec2(_topleft.x, y), width, MQ_DOWNRIGHT,
 					_blend, _color);
+			printf("%lu %lu\n", y, width);
 		}
 	} else {
 		for (size_t x = _topleft.x; x <= _bottomright.x; x++) {
@@ -212,14 +213,6 @@ MQdraw_return_value MQBlitBuffer(const MQbuffer *_dest, const MQbuffer *_src,
 MQdraw_return_value MQDrawTriangle(const MQbuffer *_buffer,
 		const MQvec2 _v1, const MQvec2 _v2, const MQvec2 _v3,
 		const bool _blend, const bool _fill, const MQcolor_t _color) {
-	const size_t left = min3(_v1.x, _v2.x, _v3.x);
-	const size_t top = min3(_v1.y, _v2.y, _v3.y);
-	const size_t right = max3(_v1.x, _v2.x, _v3.x);
-	const size_t bottom = max3(_v1.y, _v2.y, _v3.y);
-
-	const size_t width = right + 1 - left;
-	const size_t height = bottom + 1 - top;
-
 	MQdraw_return_value ret = MQ_DRAWN_FULL;
 	if (!_fill) {
 		ret |= MQDrawLine(_buffer,
@@ -234,9 +227,20 @@ MQdraw_return_value MQDrawTriangle(const MQbuffer *_buffer,
 		return ret;
 	}
 
+	const size_t left = min3(_v1.x, _v2.x, _v3.x);
+	const size_t top = min3(_v1.y, _v2.y, _v3.y);
+	const size_t right = max3(_v1.x, _v2.x, _v3.x);
+	const size_t bottom = max3(_v1.y, _v2.y, _v3.y);
+
+	const size_t width = right + 1 - left;
+	const size_t height = bottom + 1 - top;
+
 	MQbuffer *tmpbuf = MQCreateBuffer();
 	if (tmpbuf == NULL) return MQ_MEMORY_ALLOC_ERROR;
-	if (!MQInitBuffer(tmpbuf, MQVec2(width, height))) return MQ_MEMORY_ALLOC_ERROR;
+	if (!MQInitBuffer(tmpbuf, MQVec2(width, height))) {
+		free(tmpbuf);
+		return MQ_MEMORY_ALLOC_ERROR;
+	}
 	ret |= MQDrawLine(tmpbuf,
 		_v1, _v2,
 		false, 1);
@@ -246,25 +250,26 @@ MQdraw_return_value MQDrawTriangle(const MQbuffer *_buffer,
 	ret |= MQDrawLine(tmpbuf,
 		_v3, _v1,
 		false, 1);
-	size_t x1, x2;
-	size_t k;
+	size_t x1 = 0, x2 = 0;
+	bool x1set = false, x2set = false;
 	for (MQvec2 current = {0, 0}; current.y < height; current.y++) {
-		x1 = 0, x2 = 0, k = 0;
+		x1 = 0, x2 = 0, x1set = false, x2set = false;
 		for (current.x = 0; current.x < width; current.x++) {
 			if (MQGetPointUNSAFE(tmpbuf, current)) {
-				if (k == 0) {
+				if (!x1set) {
 					x1 = current.x;
-					k = 1;
+					x1set = true;
 				}
-				else if (k == 1) {
+				else {
 					x2 = current.x;
-					k = 2;
-				} else break;
+					x2set = true;
+				}
 			}
 		}
-		if (k == 2) ret |= MQDrawHorizontalLine(tmpbuf,
-			MQVec2(x1, current.y), x2 + 1 - x1, MQ_DOWNRIGHT,
-			false, _color);
+		if (x2set)
+			ret |= MQDrawHorizontalLine(tmpbuf,
+				MQVec2(x1, current.y), x2 + 1 - x1, MQ_DOWNRIGHT,
+				false, _color);
 	}
 
 	ret |= MQBlitBuffer(_buffer, tmpbuf,
@@ -275,9 +280,26 @@ MQdraw_return_value MQDrawTriangle(const MQbuffer *_buffer,
 	return ret;
 }
 
-MQdraw_return_value MQDrawPolygon(const MQbuffer *_buffer,
+MQdraw_return_value MQDrawPolygonSimpleFromArray(const MQbuffer *_buffer,
 		const MQvec2 *_vertices, const size_t _n_vertices,
 		const bool _blend, const bool _fill, const MQcolor_t _color) {
+	if (_n_vertices < 2) return MQ_INVALID_ARGS;
+	if (_n_vertices == 2) return MQDrawLine(_buffer, _vertices[0], _vertices[1],
+		_blend, _color);
+	MQdraw_return_value ret = MQ_DRAWN_FULL;
+	if (!_fill) {
+		for (size_t i = 0; i < _n_vertices-1; i++) {
+			ret |= MQDrawLine(_buffer,
+				_vertices[i], _vertices[i+1],
+				_blend, _color);
+		}
+		ret |= MQDrawLine(_buffer,
+			_vertices[_n_vertices-1], _vertices[0],
+			_blend, _color);
+
+		return ret;
+	}
+
 	size_t right = 0, bottom = 0;
 	size_t left = SIZE_MAX, top = SIZE_MAX;
 	MQbuffer *tmpbuf = MQCreateBuffer();
@@ -291,8 +313,82 @@ MQdraw_return_value MQDrawPolygon(const MQbuffer *_buffer,
 	const size_t width = right + 1 - left;
 	const size_t height = bottom + 1 - top;
 
-	MQInitBuffer(tmpbuf, MQVec2(width, height));
-	for (size_t i = 0; i < _n_vertices; i++) {
-
+	if (!MQInitBuffer(tmpbuf, MQVec2(width, height))) {
+		free(tmpbuf);
+		return MQ_MEMORY_ALLOC_ERROR;
 	}
+	for (size_t i = 0; i < _n_vertices-1; i++) {
+		ret |= MQDrawLine(tmpbuf,
+			_vertices[i], _vertices[i+1],
+			false, _color);
+	}
+	ret |= MQDrawLine(tmpbuf,
+		_vertices[_n_vertices-1], _vertices[0],
+		false, _color);
+
+	for (size_t y = 0; y < height; y++) {
+		size_t intersect_count = MQGetPointUNSAFE(tmpbuf, MQVec2(0, y)) & 1;
+		for (size_t x = 1; x < width; x++) {
+			if (MQGetPointUNSAFE(tmpbuf, MQVec2(x, y)) && !MQGetPointUNSAFE(tmpbuf, MQVec2(x-1, y))) intersect_count++;
+			if (intersect_count & 1) ret |= MQSetPoint(tmpbuf, MQVec2(x, y), _color);
+		}
+	}
+
+	MQBlitBuffer(_buffer, tmpbuf,
+		MQVec2(left, top),
+		_blend);
+	MQFreeBuffer(tmpbuf);
+
+	return ret;
+}
+
+MQdraw_return_value MQDrawPolygonSimple(const MQbuffer *_buffer,
+		const bool _blend, const bool _fill, const MQcolor_t _color,
+		const size_t _n_vertices,
+		...) {
+	MQvec2 vertices[_n_vertices];
+
+	va_list args = {};
+	va_start(args, _n_vertices);
+
+	for (size_t i = 0; i < _n_vertices; i++) {
+		vertices[i] = va_arg(args, MQvec2);
+	}
+
+	va_end(args);
+
+	return MQDrawPolygonSimpleFromArray(_buffer, vertices, _n_vertices, _blend, _fill, _color);
+}
+
+MQdraw_return_value MQDrawCircle(const MQbuffer *_buffer,
+		const MQvec2 _center, const size_t _radius,
+		const bool _blend, const bool _fill, const MQcolor_t _color) {
+	MQdraw_return_value ret = MQ_DRAWN_FULL;
+
+	const size_t radius2 = _radius * _radius;
+	size_t y = _center.y - _radius;
+	if (_radius > _center.y) {
+		y = 0;
+		ret |= MQ_OUT_OF_BOUNDS;
+	}
+	for (; y < _center.y + _radius; y++) {
+		size_t dy2 = max(y, _center.y) - min(y, _center.y);
+		dy2 *= dy2;
+		size_t x = _center.x - _radius;
+		if (_radius > _center.x) {
+			x = 0;
+			ret |= MQ_OUT_OF_BOUNDS;
+		}
+		for (; x < _center.x + _radius; x++) {
+			size_t dx2 = max(x, _center.x) - min(x, _center.x);
+			dx2 *= dx2;
+			if (_fill && dx2 + dy2 <= radius2) {
+				ret |= MQDrawPoint(_buffer, MQVec2(x, y), _blend, _color);
+			} else if (!_fill && dx2 + dy2 == radius2) {
+				ret |= MQDrawPoint(_buffer, MQVec2(x, y), _blend, _color);
+			}
+		}
+	}
+
+	return ret;
 }
